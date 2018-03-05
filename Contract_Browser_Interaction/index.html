@@ -1,0 +1,131 @@
+<doctype html>
+<html>
+<head>
+<title> My Web3 Pro </title>
+</head>
+<script src="web3.js/dist/web3.min.js"></script>
+<script type="text/javascript">
+var contract_add="0x247d5D1036B623e9201Da9003F6d93D04Ad071b0";
+var contract_abi=[
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "getMyNumber",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "getCreator",
+		"outputs": [
+			{
+				"name": "",
+				"type": "address"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [],
+		"name": "kill",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"name": "newNumber",
+				"type": "uint256"
+			}
+		],
+		"name": "setMyNumber",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	}
+]
+if (typeof web3 !== 'undefined') {
+  web3 = new Web3(web3.currentProvider);
+} else {
+  // set the provider you want from Web3.providers
+  web3 = new Web3(new Web3.providers.HttpProvider("http://127.0.0.1:8545"));
+}
+var contract_instance=web3.eth.contract(contract_abi).at(contract_add);
+
+
+function getCounter(){
+document.getElementById("myCounter").innerText=contract_instance.getMyNumber().toNumber();
+}
+
+function getBalance(){
+document.getElementById("myCounter").innerText=web3.fromWei(web3.eth.getBalance(web3.eth.accounts[0]), "ether");
+}
+function increaseCounter(){
+  var current_no=contract_instance.getMyNumber().toNumber();
+  current_no++;
+  //unlocking the account can be done from here also
+  //web3.personal.unlockAccount(web3.eth.accounts[0],"HELL");
+
+  //its not that easy like below since first you need to unlock the account, then since there is no return value
+  //you have to wait till the transaction is mined
+  //contract_instance.setMyNumber(current_no);
+  contract_instance.setMyNumber(current_no,{from: web3.eth.accounts[0], gas: 200000}, function(error,result){
+    if(error){
+      console.error(error);
+    }
+    else{
+      var txHash=result;
+      console.log(txHash);
+      callWhenMined(txHash,getCounter);
+    }
+  });
+  //since we don't know when the tx fn is mined, we are using other function
+  function callWhenMined(txhash,callback){
+    web3.eth.getTransactionReceipt(txhash,function(error,rcpt){
+      if(error){
+        console.error(error);
+      }
+      else{
+        if(rcpt == null){
+          setTimeout(function(){
+            callWhenMined(txhash,callback);
+          },500 );
+        }
+        else{
+          callback();
+        }
+      }
+    });
+  }
+}
+</script>
+<body>
+<h1> Interact with Contract </h1>
+<button onClick="getBalance()">Get Balance</button>
+<button onClick="getCounter()">Update Counter</button>
+<button onClick="increaseCounter()">Increase Counter</button>
+
+<span id="myCounter"></span> Counter
+</body>
+</html>
